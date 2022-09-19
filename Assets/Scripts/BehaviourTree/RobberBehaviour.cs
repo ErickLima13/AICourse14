@@ -17,8 +17,11 @@ public class RobberBehaviour : MonoBehaviour
 
     private ActionState state = ActionState.IDLE;
 
+    private Node.Status treeStatus = Node.Status.RUNNING;
+
     public GameObject diamond;
     public GameObject van;
+    public GameObject backDoor;
 
 
     // Start is called before the first frame update
@@ -28,18 +31,21 @@ public class RobberBehaviour : MonoBehaviour
         
         tree = new();
 
-        Node steal = new("Steal Something");
+        Sequence steal = new("Steal Something");
 
         Leaf goToDiamond = new("Go To Diamond", GoToDiamond);
         Leaf goToVan = new("Go To Van",GoToVan);
+        Leaf goToBackDoor = new("Go To Back Door",GoToBackDoor);
 
         tree.AddChild(steal);
 
+        steal.AddChild(goToBackDoor);
         steal.AddChild(goToDiamond);
+        steal.AddChild(goToBackDoor);
         steal.AddChild(goToVan);
 
         tree.PrintTree();
-        tree.Process();
+        
 
       
     }
@@ -52,6 +58,11 @@ public class RobberBehaviour : MonoBehaviour
     public Node.Status GoToVan()
     {
         return GoToLocation(van.transform.position); ;
+    }
+
+    public Node.Status GoToBackDoor()
+    {
+        return GoToLocation(backDoor.transform.position); ;
     }
 
     private Node.Status GoToLocation(Vector3 destination)
@@ -80,6 +91,11 @@ public class RobberBehaviour : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (treeStatus == Node.Status.RUNNING)
+        {
+            treeStatus = tree.Process();
+        }
         
+
     }
 }
