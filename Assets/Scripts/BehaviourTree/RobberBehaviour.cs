@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.AI;
@@ -22,7 +21,19 @@ public class RobberBehaviour : MonoBehaviour
 
     private Node.Status treeStatus = Node.Status.RUNNING;
 
-    private int randomIndex;
+    private int index = 0;
+    private int childCount = 0;
+
+    private Leaf hasGotMoney;
+    private Leaf hasThings;
+    private Leaf goToDiamond;
+    private Leaf goToVan;
+    private Leaf goToBackDoor;
+    private Leaf goToFrontDoor;
+
+    private Sequence steal;
+    private Selector opendoor;
+    private Selector things;
 
     public GameObject diamond;
     public GameObject van;
@@ -31,6 +42,7 @@ public class RobberBehaviour : MonoBehaviour
 
     public List<GameObject> stealsThings;
 
+    [Range(0, 1000)] public int money = 800;
 
     // Start is called before the first frame update
     void Start()
@@ -42,40 +54,78 @@ public class RobberBehaviour : MonoBehaviour
         diamondChild = diamond.transform.GetChild(0).gameObject;
 
         stealsThings = GameObject.FindGameObjectsWithTag("Player").ToList();
-        randomIndex = Random.Range(0, stealsThings.Count);
-        
 
-        Sequence steal = new("Steal Something");
-        Selector opendoor = new("Open Door");
+        steal = new("Steal Something");
+        opendoor = new("Open Door");
 
-        Leaf goToDiamond = new("Go To Diamond", GoToDiamond);
-        Leaf goToVan = new("Go To Van", GoToVan);
-        Leaf goToBackDoor = new("Go To Backdoor", GoToBackDoor);
-        Leaf goToFrontDoor = new("Go To Frontdoor", GoToFrontDoor);
+        hasGotMoney = new("Has Got Money", HasMoney);
+        hasThings = new("Has  Things", Hasthings);
+        goToDiamond = new("Go To Diamond", GoToDiamond);
+        goToVan = new("Go To Van", GoToVan);
+        goToBackDoor = new("Go To Backdoor", GoToBackDoor);
+        goToFrontDoor = new("Go To Frontdoor", GoToFrontDoor);
 
-        tree.AddChild(steal);
+        //tree.AddChild(steal);
 
-        steal.AddChild(opendoor);
-        steal.AddChild(goToDiamond);
+        //steal.AddChild(hasGotMoney);
+
+        //steal.AddChild(opendoor);
+        // steal.AddChild(goToDiamond);
         //steal.AddChild(goToFrontDoor);
-        steal.AddChild(goToVan);
+        // steal.AddChild(goToVan);
+        //steal.AddChild(hasThings);
+
+        GoingToSteal();
 
         opendoor.AddChild(goToFrontDoor);
         opendoor.AddChild(goToBackDoor);
 
-
         tree.PrintTree();
 
+        Time.timeScale = 5;
 
+    }
 
+    private void GoingToSteal()
+    {
+        tree.AddChild(steal);
+        steal.AddChild(opendoor);
+        steal.AddChild(goToDiamond);
+        steal.AddChild(goToVan);
+        steal.AddChild(hasThings);
+    }
 
+    public Node.Status HasMoney()
+    {
+        if (money >= 500)
+        {
+            return Node.Status.FAILURE;
+        }
 
+        return Node.Status.SUCCES;
+    }
 
+    public Node.Status Hasthings()
+    {
+        if (index >= stealsThings.Count)
+        {
+            index = 0;
+        }
+
+        if (stealsThings.Count <= 0)
+        {
+            GetComponent<EndScene>().animator.Play("FadeIn");
+            return Node.Status.FAILURE;
+        }
+
+        GoingToSteal();
+
+        return Node.Status.SUCCES;
     }
 
     public Node.Status GoToDiamond()
     {
-        GameObject go = stealsThings[randomIndex];
+        GameObject go = stealsThings[index];
 
         Node.Status s = GoToLocation(go.transform.position);
 
@@ -84,11 +134,10 @@ public class RobberBehaviour : MonoBehaviour
             go.transform.parent = transform;
             go.transform.position = transform.position;
 
-            if(go.GetComponent<Rotate>() != null)
+            if (go.GetComponent<Rotate>() != null)
             {
                 go.GetComponent<Rotate>().enabled = false;
             }
-            
         }
 
         return s;
@@ -100,9 +149,11 @@ public class RobberBehaviour : MonoBehaviour
 
         if (s == Node.Status.SUCCES)
         {
-            //diamondChild.SetActive(false);
-            transform.GetChild(1).gameObject.SetActive(false);
-            stealsThings.Remove(transform.GetChild(1).gameObject);
+            transform.GetChild(childCount + 1).gameObject.SetActive(false);
+            stealsThings.RemoveAt(index);
+            money += 300;
+            index++;
+            childCount++;
         }
 
         return s;
@@ -164,11 +215,9 @@ public class RobberBehaviour : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (treeStatus == Node.Status.RUNNING)
+        if (treeStatus != Node.Status.SUCCES)
         {
             treeStatus = tree.Process();
         }
-
-
     }
 }
